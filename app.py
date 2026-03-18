@@ -7,6 +7,14 @@ from runpod import get_spend_report, RunPodAPIError
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 
+# Initialize database if configured
+from db import DATABASE_URL, init_db
+if DATABASE_URL:
+    try:
+        init_db()
+    except Exception as e:
+        print(f"DB init failed (will run without persistence): {e}")
+
 
 def login_required(f):
     @wraps(f)

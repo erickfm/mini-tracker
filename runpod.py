@@ -1,7 +1,7 @@
 import calendar
 import datetime
 import json
-import math
+import time
 import requests
 from collections import defaultdict
 
@@ -95,6 +95,57 @@ def parse_pod_user(pod_name):
     return None
 
 
+def _sync_to_db(pods, billing):
+    """Persist API data to Postgres. Fails silently if DB unavailable."""
+    try:
+        from db import DATABASE_URL, upsert_pods, upsert_billing, log_sync
+        if not DATABASE_URL:
+            return
+        t0 = time.time()
+        pods_n = upsert_pods(pods, parse_pod_user)
+        billing_n = upsert_billing(billing)
+        duration = int((time.time() - t0) * 1000)
+        log_sync(pods_n, billing_n, duration)
+    except Exception as e:
+        print(f"DB sync failed: {e}")
+
+
+def _get_pod_info_from_db():
+    """Load all known pods from DB. Returns empty dict if DB unavailable."""
+    try:
+        from db import DATABASE_URL, get_all_known_pods
+        if not DATABASE_URL:
+            return {}
+        return get_all_known_pods()
+    except Exception as e:
+        print(f"DB pod lookup failed: {e}")
+        return {}
+
+
+def _get_billing_from_db(year_month):
+    """Load billing records for a month from DB."""
+    try:
+        from db import DATABASE_URL, get_billing_for_month
+        if not DATABASE_URL:
+            return None
+        return get_billing_for_month(year_month)
+    except Exception as e:
+        print(f"DB billing lookup failed: {e}")
+        return None
+
+
+def _get_available_months_from_db():
+    """Get available months from DB."""
+    try:
+        from db import DATABASE_URL, get_available_months
+        if not DATABASE_URL:
+            return None
+        return get_available_months()
+    except Exception as e:
+        print(f"DB months lookup failed: {e}")
+        return None
+
+
 def get_spend_report(api_key, user=None, month=None):
     """Build a spend report using actual billing data.
 
@@ -103,11 +154,30 @@ def get_spend_report(api_key, user=None, month=None):
     pods = fetch_pods(api_key)
     billing = fetch_billing(api_key)
 
-    # Build id->pod info map from current pods
+    # Persist to DB (non-blocking on failure)
+    _sync_to_db(pods, billing)
+
+    # Build pod_info: DB first (historical), then overlay live API data
+    db_pods = _get_pod_info_from_db()
     pod_info = {}
+
+    # Load historical pods from DB (terminated pods get resolved here)
+    for pod_id, info in db_pods.items():
+        pod_info[pod_id] = {
+            "name": info["name"],
+            "user": info["user_name"],
+            "status": "Terminated",
+            "gpu_name": info["gpu_name"],
+            "gpu_count": info["gpu_count"],
+            "cost_per_hr": 0,
+            "uptime_hours": 0,
+        }
+
+    # Overlay live API data (takes precedence for current pods)
     for p in pods:
         pod_info[p["id"]] = {
             "name": p.get("name", ""),
+            "user": parse_pod_user(p.get("name", "")),
             "status": "Running" if p.get("desiredStatus") == "RUNNING" else "Stopped",
             "gpu_name": (p.get("machine") or {}).get("gpuDisplayName", "N/A"),
             "gpu_count": p.get("gpuCount", 1),
@@ -127,6 +197,12 @@ def get_spend_report(api_key, user=None, month=None):
     days_elapsed = today.day if is_current_month else days_in_month
     month_label = datetime.date(target_year, target_month, 1).strftime("%B %Y")
 
+    # For past months, try DB first (has longer history than API)
+    if not is_current_month:
+        db_billing = _get_billing_from_db(target_prefix)
+        if db_billing is not None:
+            billing = db_billing
+
     # Aggregate billing by pod for the target month
     pod_spend = defaultdict(lambda: {"amount": 0, "time_billed_ms": 0, "disk_billed_gb": 0})
     for record in billing:
@@ -145,16 +221,16 @@ def get_spend_report(api_key, user=None, month=None):
 
     for pid, spend in pod_spend.items():
         info = pod_info.get(pid)
-        if info:
-            name = info["name"]
-            pod_user = parse_pod_user(name) or "unknown"
-            all_users_set.add(pod_user) if pod_user != "unknown" else None
+        if info and info.get("user"):
+            # Pod has a known name and user (from API or DB)
+            pod_user = info["user"]
+            all_users_set.add(pod_user)
 
             if user and pod_user != user:
                 continue
 
             enriched.append({
-                "name": name,
+                "name": info["name"],
                 "user": pod_user,
                 "status": info["status"],
                 "gpu_name": info["gpu_name"],
@@ -165,32 +241,33 @@ def get_spend_report(api_key, user=None, month=None):
                 "long_running": info["status"] == "Running" and info["uptime_hours"] > 24,
             })
         else:
-            # Terminated pod — no name available
+            # Truly unknown pod (terminated before we started tracking)
             terminated_spend += spend["amount"]
             terminated_count += 1
 
-    # Also gather users from current pods not in billing (newly created)
+    # Gather users from current pods not in billing (newly created)
     for pid, info in pod_info.items():
-        pod_user = parse_pod_user(info["name"]) or "unknown"
-        if pod_user != "unknown":
+        pod_user = info.get("user")
+        if pod_user:
             all_users_set.add(pod_user)
 
     all_users = sorted(all_users_set)
 
-    # Sort: running first, then by cost descending
+    # Sort: running first, then stopped, then terminated
+    status_order = {"Running": 0, "Stopped": 1, "Terminated": 2}
     running_pods = sorted(
         [p for p in enriched if p["status"] == "Running"],
         key=lambda p: -p["total_cost"],
     )
     stopped_pods = sorted(
         [p for p in enriched if p["status"] != "Running"],
-        key=lambda p: -p["total_cost"],
+        key=lambda p: (status_order.get(p["status"], 9), -p["total_cost"]),
     )
 
     total_spend = sum(p["total_cost"] for p in enriched)
     burn_per_hr = sum(p["cost_per_hr"] for p in running_pods)
 
-    # Weekly spend: sum billing records from this week only
+    # Weekly spend
     weekly_spend = 0
     if is_current_month:
         weekday = today.weekday()
@@ -206,9 +283,8 @@ def get_spend_report(api_key, user=None, month=None):
             if record_date >= week_start.isoformat() and record_date <= today.isoformat():
                 pid = record["podId"]
                 info = pod_info.get(pid)
-                if info:
-                    pod_user = parse_pod_user(info["name"]) or "unknown"
-                    if user and pod_user != user:
+                if info and info.get("user"):
+                    if user and info["user"] != user:
                         continue
                     weekly_spend += record.get("amount", 0)
     else:
@@ -217,8 +293,12 @@ def get_spend_report(api_key, user=None, month=None):
     budget = BUDGET_PER_USER * len(all_users) if not user else BUDGET_PER_USER
     projection = build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month, budget) if is_current_month else None
 
-    # Available months from billing data
-    available_months = sorted(set(r["time"][:7] for r in billing), reverse=True)
+    # Available months: DB (long history) or API fallback
+    db_months = _get_available_months_from_db()
+    if db_months:
+        available_months = db_months
+    else:
+        available_months = sorted(set(r["time"][:7] for r in billing), reverse=True)
 
     return {
         "user": user or "All Users",

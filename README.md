@@ -1,6 +1,6 @@
-# Mini Tracker
+# Tracker
 
-A lightweight web dashboard that shows per-user RunPod spend for the current month. Filters pods by the naming convention `<project>-<user>-<id>` and calculates GPU compute + storage costs.
+A web dashboard that shows per-user RunPod spend using actual billing data. Filters pods by the naming convention `<project>_<user>_<description>` and attributes costs per user — including terminated pods.
 
 ## Setup
 
@@ -8,13 +8,7 @@ A lightweight web dashboard that shows per-user RunPod spend for the current mon
 
 - Python 3.10+
 - A RunPod API key
-
-### Get your RunPod API key
-
-1. Go to [RunPod Settings](https://www.runpod.io/console/user/settings)
-2. Scroll to **API Keys**
-3. Click **Create API Key** (or copy an existing one)
-4. Copy the key — you'll need it as an environment variable
+- Postgres (optional locally, required on Railway for persistence)
 
 ### Local development
 
@@ -23,22 +17,35 @@ pip install -r requirements.txt
 RUNPOD_API_KEY=your_key_here python app.py
 ```
 
+Works without Postgres — just won't persist pod metadata for terminated pod attribution.
+
+To run with Postgres locally:
+```bash
+DATABASE_URL=postgresql://user:pass@localhost/tracker RUNPOD_API_KEY=xxx python app.py
+```
+
 Visit `http://localhost:8000`. Filter by user with `/?user=erick`.
 
 ## Deploy to Railway
 
 1. Push this repo to GitHub
-2. Go to [Railway](https://railway.com) and create a new project from the GitHub repo
-3. In the Railway project settings, add the environment variable:
-   - `RUNPOD_API_KEY` = your RunPod API key
-4. Railway auto-detects the Python app and deploys it — no further config needed
-5. Visit the generated `.up.railway.app` URL
+2. Create a new Railway project from the GitHub repo
+3. Add a **Postgres** plugin to the project (one click — Railway injects `DATABASE_URL` automatically)
+4. Set environment variables:
+   - `RUNPOD_API_KEY` — your RunPod API key
+   - `APP_PASSWORD` — password to protect the dashboard
+   - `SECRET_KEY` — any random string (keeps sessions alive across deploys)
+5. Deploy and visit the generated `.up.railway.app` URL
+
+The first page load creates the database tables and backfills ~31 days of billing history.
 
 ## How it works
 
-- Queries the RunPod GraphQL API for all pods in the org
-- Parses pod names (`<project>-<user>-<id>`) to attribute costs per user
-- Calculates GPU compute cost from uptime and hourly rate
-- Calculates storage costs (container disk + volume disk) prorated to current date
-- Stopped pods use a higher container storage rate ($0.20/GB/mo vs $0.10/GB/mo)
+- Uses the **RunPod billing API** (`/v1/billing/pods`) for actual daily charges — not estimates
+- Queries the GraphQL API for current pod status (running/stopped, GPU, uptime)
+- **Persists pod metadata to Postgres** so terminated pods retain their name and user attribution
+- Parses pod names (`<project>_<user>_<rest>`) to attribute costs per user
+- Stores billing records for long-term history beyond the ~31 days the API retains
+- Supports browsing prior months via dropdown
+- Spend projection chart with power law fit and per-user budget line ($5k/user)
 - Auto-refreshes every 5 minutes

@@ -260,6 +260,8 @@
                     <td class="px-4 py-2.5">
                         {% if pod.status == "Running" %}
                         <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        {% elif pod.status == "Terminated" %}
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-500/50"></span>
                         {% else %}
                         <span class="inline-block w-1.5 h-1.5 rounded-full bg-gray-700"></span>
                         {% endif %}
