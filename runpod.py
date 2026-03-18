@@ -3,8 +3,10 @@ import datetime
 import json
 import math
 import requests
+from collections import defaultdict
 
-RUNPOD_GRAPHQL_URL = "https://api.runpod.io/graphql"
+GRAPHQL_URL = "https://api.runpod.io/graphql"
+REST_BASE = "https://rest.runpod.io/v1"
 
 PODS_QUERY = """
 query {
@@ -12,46 +14,41 @@ query {
     pods {
       id
       name
-      runtime {
-        uptimeInSeconds
-        gpus {
-          gpuUtilPercent
-        }
-      }
       desiredStatus
       costPerHr
       gpuCount
       machine {
         gpuDisplayName
       }
-      volumeInGb
-      containerDiskInGb
+      runtime {
+        uptimeInSeconds
+      }
     }
   }
 }
 """
 
-# Storage rates (per GB per month)
-STORAGE_RATE_RUNNING = 0.10
-STORAGE_RATE_STOPPED = 0.20
-VOLUME_RATE = 0.10
+BUDGET_PER_USER = 5000
 
 
 class RunPodAPIError(Exception):
     pass
 
 
-def fetch_pods(api_key):
-    """Fetch all pods from the RunPod GraphQL API."""
-    headers = {
+def _headers(api_key):
+    return {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+
+
+def fetch_pods(api_key):
+    """Fetch current pods from the GraphQL API (for live status info)."""
     try:
         resp = requests.post(
-            RUNPOD_GRAPHQL_URL,
+            GRAPHQL_URL,
             json={"query": PODS_QUERY},
-            headers=headers,
+            headers=_headers(api_key),
             timeout=15,
         )
         resp.raise_for_status()
@@ -68,9 +65,23 @@ def fetch_pods(api_key):
         raise RunPodAPIError("Unexpected API response structure.")
 
 
+def fetch_billing(api_key):
+    """Fetch pod billing history from the REST API."""
+    try:
+        resp = requests.get(
+            f"{REST_BASE}/billing/pods",
+            headers=_headers(api_key),
+            timeout=15,
+        )
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        raise RunPodAPIError(f"Failed to reach RunPod billing API: {e}")
+    return resp.json()
+
+
 def parse_pod_user(pod_name):
-    """Extract the user segment from a pod name like '<project>-<user>-<rest>'
-    or '<project>_<user>_<rest>'.
+    """Extract the user segment from a pod name like '<project>_<user>_<rest>'
+    or '<project>-<user>-<rest>'.
 
     Splits on '_' first (dominant convention), falls back to '-'.
     Returns the user string, or None if the name doesn't match.
@@ -84,127 +95,164 @@ def parse_pod_user(pod_name):
     return None
 
 
-def get_unique_users(pods):
-    """Return sorted list of unique user names parsed from pod names."""
-    users = set()
-    for pod in pods:
-        user = parse_pod_user(pod.get("name", ""))
-        if user:
-            users.add(user)
-    return sorted(users)
+def get_spend_report(api_key, user=None, month=None):
+    """Build a spend report using actual billing data.
 
+    month: 'YYYY-MM' string, defaults to current month.
+    """
+    pods = fetch_pods(api_key)
+    billing = fetch_billing(api_key)
 
-def calculate_pod_cost(pod, days_elapsed, days_in_month):
-    """Calculate costs for a single pod and return an enriched dict."""
-    name = pod.get("name", "unnamed")
-    user = parse_pod_user(name) or "unknown"
-    is_running = pod.get("desiredStatus") == "RUNNING"
+    # Build id->pod info map from current pods
+    pod_info = {}
+    for p in pods:
+        pod_info[p["id"]] = {
+            "name": p.get("name", ""),
+            "status": "Running" if p.get("desiredStatus") == "RUNNING" else "Stopped",
+            "gpu_name": (p.get("machine") or {}).get("gpuDisplayName", "N/A"),
+            "gpu_count": p.get("gpuCount", 1),
+            "cost_per_hr": p.get("costPerHr") or 0,
+            "uptime_hours": round(((p.get("runtime") or {}).get("uptimeInSeconds") or 0) / 3600, 1),
+        }
 
-    # GPU info
-    machine = pod.get("machine") or {}
-    gpu_name = machine.get("gpuDisplayName", "N/A")
-    gpu_count = pod.get("gpuCount", 1)
+    today = datetime.date.today()
+    if month:
+        target_year, target_month = int(month[:4]), int(month[5:7])
+    else:
+        target_year, target_month = today.year, today.month
 
-    # Uptime
-    runtime = pod.get("runtime") or {}
-    uptime_seconds = runtime.get("uptimeInSeconds") or 0
-    uptime_hours = uptime_seconds / 3600
+    target_prefix = f"{target_year}-{target_month:02d}"
+    is_current_month = (target_year == today.year and target_month == today.month)
+    days_in_month = calendar.monthrange(target_year, target_month)[1]
+    days_elapsed = today.day if is_current_month else days_in_month
+    month_label = datetime.date(target_year, target_month, 1).strftime("%B %Y")
 
-    # Cost per hour (already reflects gpu count per spec)
-    cost_per_hr = pod.get("costPerHr") or 0
+    # Aggregate billing by pod for the target month
+    pod_spend = defaultdict(lambda: {"amount": 0, "time_billed_ms": 0, "disk_billed_gb": 0})
+    for record in billing:
+        if not record["time"].startswith(target_prefix):
+            continue
+        pid = record["podId"]
+        pod_spend[pid]["amount"] += record.get("amount", 0)
+        pod_spend[pid]["time_billed_ms"] += record.get("timeBilledMs", 0)
+        pod_spend[pid]["disk_billed_gb"] += record.get("diskSpaceBilledGB", 0)
 
-    # Compute cost
-    compute_cost = uptime_hours * cost_per_hr if is_running else 0
+    # Build enriched pod list
+    all_users_set = set()
+    enriched = []
+    terminated_spend = 0
+    terminated_count = 0
 
-    # Storage costs (prorated)
-    prorate = days_elapsed / days_in_month if days_in_month > 0 else 0
-    container_gb = pod.get("containerDiskInGb") or 0
-    volume_gb = pod.get("volumeInGb") or 0
+    for pid, spend in pod_spend.items():
+        info = pod_info.get(pid)
+        if info:
+            name = info["name"]
+            pod_user = parse_pod_user(name) or "unknown"
+            all_users_set.add(pod_user) if pod_user != "unknown" else None
 
-    container_rate = STORAGE_RATE_RUNNING if is_running else STORAGE_RATE_STOPPED
-    container_storage_cost = container_gb * container_rate * prorate
-    volume_storage_cost = volume_gb * VOLUME_RATE * prorate
-    storage_cost = container_storage_cost + volume_storage_cost
+            if user and pod_user != user:
+                continue
 
-    total_cost = compute_cost + storage_cost
+            enriched.append({
+                "name": name,
+                "user": pod_user,
+                "status": info["status"],
+                "gpu_name": info["gpu_name"],
+                "gpu_count": info["gpu_count"],
+                "cost_per_hr": round(info["cost_per_hr"], 2),
+                "uptime_hours": info["uptime_hours"],
+                "total_cost": round(spend["amount"], 2),
+                "long_running": info["status"] == "Running" and info["uptime_hours"] > 24,
+            })
+        else:
+            # Terminated pod — no name available
+            terminated_spend += spend["amount"]
+            terminated_count += 1
+
+    # Also gather users from current pods not in billing (newly created)
+    for pid, info in pod_info.items():
+        pod_user = parse_pod_user(info["name"]) or "unknown"
+        if pod_user != "unknown":
+            all_users_set.add(pod_user)
+
+    all_users = sorted(all_users_set)
+
+    # Sort: running first, then by cost descending
+    running_pods = sorted(
+        [p for p in enriched if p["status"] == "Running"],
+        key=lambda p: -p["total_cost"],
+    )
+    stopped_pods = sorted(
+        [p for p in enriched if p["status"] != "Running"],
+        key=lambda p: -p["total_cost"],
+    )
+
+    total_spend = sum(p["total_cost"] for p in enriched)
+    burn_per_hr = sum(p["cost_per_hr"] for p in running_pods)
+
+    # Weekly spend: sum billing records from this week only
+    weekly_spend = 0
+    if is_current_month:
+        weekday = today.weekday()
+        week_start = today - datetime.timedelta(days=weekday)
+        if week_start.month < today.month or week_start.year < today.year:
+            week_start = today.replace(day=1)
+        week_label = f"{week_start.strftime('%b %d')} – {today.strftime('%b %d')}"
+
+        for record in billing:
+            if not record["time"].startswith(target_prefix):
+                continue
+            record_date = record["time"][:10]
+            if record_date >= week_start.isoformat() and record_date <= today.isoformat():
+                pid = record["podId"]
+                info = pod_info.get(pid)
+                if info:
+                    pod_user = parse_pod_user(info["name"]) or "unknown"
+                    if user and pod_user != user:
+                        continue
+                    weekly_spend += record.get("amount", 0)
+    else:
+        week_label = None
+
+    budget = BUDGET_PER_USER * len(all_users) if not user else BUDGET_PER_USER
+    projection = build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month, budget) if is_current_month else None
+
+    # Available months from billing data
+    available_months = sorted(set(r["time"][:7] for r in billing), reverse=True)
 
     return {
-        "name": name,
-        "user": user,
-        "status": "Running" if is_running else "Stopped",
-        "gpu_name": gpu_name,
-        "gpu_count": gpu_count,
-        "uptime_hours": round(uptime_hours, 1),
-        "cost_per_hr": round(cost_per_hr, 2),
-        "compute_cost": round(compute_cost, 2),
-        "storage_cost": round(storage_cost, 2),
-        "total_cost": round(total_cost, 2),
-        "long_running": is_running and uptime_hours > 24,
+        "user": user or "All Users",
+        "month_label": month_label,
+        "month_value": target_prefix,
+        "is_current_month": is_current_month,
+        "week_label": week_label,
+        "running_pods": running_pods,
+        "stopped_pods": stopped_pods,
+        "total_spend": round(total_spend, 2),
+        "weekly_spend": round(weekly_spend, 2),
+        "burn_per_hr": round(burn_per_hr, 2),
+        "terminated_spend": round(terminated_spend, 2),
+        "terminated_count": terminated_count,
+        "all_users": all_users,
+        "available_months": available_months,
+        "projection": projection,
     }
 
 
-def _weekly_cost(pod_data, days_in_week, days_in_month):
-    """Estimate a pod's cost for the current week (Mon-Sun).
-
-    For running pods: prorate compute by (days_in_week / uptime_days) if
-    uptime is longer than the week, otherwise use full compute.
-    Storage is prorated to the week days.
-    """
-    # Storage prorated to this week
-    monthly_storage = pod_data["storage_cost"]
-    # Reverse the monthly prorate, then re-prorate to the week
-    if days_in_month > 0:
-        weekly_storage = (monthly_storage / max(pod_data.get("_days_elapsed", 1), 1)) * days_in_week
-    else:
-        weekly_storage = 0
-
-    # Compute: if uptime_hours fits within the week, use it directly.
-    # Otherwise prorate.
-    uptime_hours = pod_data["uptime_hours"]
-    week_hours = days_in_week * 24
-    if uptime_hours <= week_hours:
-        weekly_compute = pod_data["compute_cost"]
-    else:
-        weekly_compute = pod_data["compute_cost"] * (week_hours / uptime_hours) if uptime_hours > 0 else 0
-
-    return round(weekly_compute + weekly_storage, 2)
-
-
-BUDGET_PER_USER = 5000
-
-
 def build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month, budget):
-    """Build chart data for spend projection using a power law fit.
-
-    We have two constraints:
-      spend(t) = a * t^b
-      spend'(t) = a * b * t^(b-1) = daily_burn_rate
-
-    From spend(N) and spend'(N) we solve for a and b.
-    """
+    """Build chart data for spend projection using a power law fit."""
     if days_elapsed <= 0 or total_spend <= 0 or burn_per_hr <= 0:
         return None
 
     daily_burn = burn_per_hr * 24
     t = days_elapsed
 
-    # b = (daily_burn * t) / total_spend
-    # Clamp b to reasonable range [0.5, 3] to avoid wild extrapolations
     b = max(0.5, min(3.0, (daily_burn * t) / total_spend))
-
-    # a = total_spend / t^b
     a = total_spend / (t ** b) if t > 0 else 0
 
-    # Generate points: actual spend so far (single known point) + projection
     labels = list(range(1, days_in_month + 1))
-    projected = []
-    for d in labels:
-        projected.append(round(a * (d ** b), 2))
-
-    # Budget line
+    projected = [round(a * (d ** b), 2) for d in labels]
     budget_line = [budget] * len(labels)
-
-    # Projected end-of-month spend
     eom_projected = round(a * (days_in_month ** b), 2)
 
     return {
@@ -215,66 +263,4 @@ def build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month, budg
         "eom_projected": eom_projected,
         "budget": budget,
         "over_budget": eom_projected > budget,
-    }
-
-
-def get_spend_report(api_key, user=None):
-    """Build a full spend report, optionally filtered by user."""
-    pods = fetch_pods(api_key)
-    all_users = get_unique_users(pods)
-
-    today = datetime.date.today()
-    days_elapsed = today.day
-    days_in_month = calendar.monthrange(today.year, today.month)[1]
-    month_label = today.strftime("%B %Y")
-
-    # Current week: Monday=0 .. Sunday=6
-    weekday = today.weekday()  # 0=Mon
-    week_start = today - datetime.timedelta(days=weekday)
-    # Clamp to start of month
-    if week_start.month < today.month or week_start.year < today.year:
-        week_start = today.replace(day=1)
-    days_in_week = (today - week_start).days + 1  # inclusive of today
-    week_label = f"{week_start.strftime('%b %d')} – {today.strftime('%b %d')}"
-
-    enriched = []
-    for pod in pods:
-        pod_data = calculate_pod_cost(pod, days_elapsed, days_in_month)
-        pod_data["_days_elapsed"] = days_elapsed
-        if user and pod_data["user"] != user:
-            continue
-        pod_data["weekly_cost"] = _weekly_cost(pod_data, days_in_week, days_in_month)
-        enriched.append(pod_data)
-
-    running_pods = sorted(
-        [p for p in enriched if p["status"] == "Running"],
-        key=lambda p: -p["total_cost"],
-    )
-    stopped_pods = sorted(
-        [p for p in enriched if p["status"] != "Running"],
-        key=lambda p: -p["total_cost"],
-    )
-
-    total_compute = sum(p["compute_cost"] for p in enriched)
-    total_storage = sum(p["storage_cost"] for p in enriched)
-    total_spend = sum(p["total_cost"] for p in enriched)
-    burn_per_hr = sum(p["cost_per_hr"] for p in running_pods)
-    weekly_spend = sum(p["weekly_cost"] for p in enriched)
-
-    budget = BUDGET_PER_USER * len(all_users) if not user else BUDGET_PER_USER
-    projection = build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month, budget)
-
-    return {
-        "user": user or "All Users",
-        "month_label": month_label,
-        "week_label": week_label,
-        "running_pods": running_pods,
-        "stopped_pods": stopped_pods,
-        "total_compute": round(total_compute, 2),
-        "total_storage": round(total_storage, 2),
-        "total_spend": round(total_spend, 2),
-        "weekly_spend": round(weekly_spend, 2),
-        "burn_per_hr": round(burn_per_hr, 2),
-        "all_users": all_users,
-        "projection": projection,
     }

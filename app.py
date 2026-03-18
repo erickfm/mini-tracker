@@ -48,12 +48,14 @@ def dashboard():
         return render_template("error.html", message="RUNPOD_API_KEY environment variable is not set."), 500
 
     user = request.args.get("user") or None
+    month = request.args.get("month") or None
+
     try:
-        report = get_spend_report(api_key, user=user)
+        report = get_spend_report(api_key, user=user, month=month)
     except RunPodAPIError as e:
         return render_template("error.html", message=str(e)), 502
 
-    return render_template("dashboard.html", report=report, selected_user=user)
+    return render_template("dashboard.html", report=report, selected_user=user, selected_month=month)
 
 
 if __name__ == "__main__":
