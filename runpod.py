@@ -169,10 +169,10 @@ def _weekly_cost(pod_data, days_in_week, days_in_month):
     return round(weekly_compute + weekly_storage, 2)
 
 
-MONTHLY_BUDGET = 5000
+BUDGET_PER_USER = 5000
 
 
-def build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month):
+def build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month, budget):
     """Build chart data for spend projection using a power law fit.
 
     We have two constraints:
@@ -204,7 +204,7 @@ def build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month):
         projected.append(round(a * (d ** b), 2))
 
     # Budget line
-    budget_line = [MONTHLY_BUDGET] * len(labels)
+    budget_line = [budget] * len(labels)
 
     # Projected end-of-month spend
     eom_projected = round(a * (days_in_month ** b), 2)
@@ -215,8 +215,8 @@ def build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month):
         "budget_json": json.dumps(budget_line),
         "days_elapsed": days_elapsed,
         "eom_projected": eom_projected,
-        "budget": MONTHLY_BUDGET,
-        "over_budget": eom_projected > MONTHLY_BUDGET,
+        "budget": budget,
+        "over_budget": eom_projected > budget,
     }
 
 
@@ -263,7 +263,8 @@ def get_spend_report(api_key, user=None):
     burn_per_hr = sum(p["cost_per_hr"] for p in running_pods)
     weekly_spend = sum(p["weekly_cost"] for p in enriched)
 
-    projection = build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month)
+    budget = BUDGET_PER_USER * len(all_users) if not user else BUDGET_PER_USER
+    projection = build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month, budget)
 
     return {
         "user": user or "All Users",

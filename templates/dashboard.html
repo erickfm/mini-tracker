@@ -4,10 +4,10 @@
 <!-- Header -->
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">{{ report.month_label }}</h1>
+        <h1 class="text-2xl font-bold text-gray-100">{{ report.month_label }}</h1>
         <p class="text-gray-500 text-sm mt-1">
             Showing pods for
-            <span class="font-medium text-gray-700">{{ report.user }}</span>
+            <span class="font-medium text-gray-300">{{ report.user }}</span>
         </p>
     </div>
 
@@ -15,7 +15,7 @@
     <div>
         <select
             onchange="window.location = this.value ? '/?user=' + this.value : '/'"
-            class="block w-full sm:w-48 rounded-md border-gray-300 bg-white px-3 py-2 text-sm shadow-sm border focus:border-indigo-500 focus:ring-indigo-500"
+            class="block w-full sm:w-48 rounded-md border-gray-700 bg-gray-800 text-gray-200 px-3 py-2 text-sm shadow-sm border focus:border-indigo-500 focus:ring-indigo-500"
         >
             <option value="" {% if not selected_user %}selected{% endif %}>All Users</option>
             {% for u in report.all_users %}
@@ -27,26 +27,26 @@
 
 <!-- Summary Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-10">
-    <div class="bg-indigo-50 rounded-lg border border-indigo-200 p-5">
-        <p class="text-xs font-medium text-indigo-600 uppercase tracking-wide">Month Total</p>
-        <p class="text-2xl font-bold text-indigo-700 mt-1">${{ "%.2f"|format(report.total_spend) }}</p>
+    <div class="bg-indigo-950/50 rounded-lg border border-indigo-800/50 p-5">
+        <p class="text-xs font-medium text-indigo-400 uppercase tracking-wide">Month Total</p>
+        <p class="text-2xl font-bold text-indigo-300 mt-1">${{ "%.2f"|format(report.total_spend) }}</p>
     </div>
-    <div class="bg-violet-50 rounded-lg border border-violet-200 p-5">
-        <p class="text-xs font-medium text-violet-600 uppercase tracking-wide">This Week</p>
-        <p class="text-2xl font-bold text-violet-700 mt-1">${{ "%.2f"|format(report.weekly_spend) }}</p>
-        <p class="text-xs text-violet-400 mt-1">{{ report.week_label }}</p>
+    <div class="bg-violet-950/50 rounded-lg border border-violet-800/50 p-5">
+        <p class="text-xs font-medium text-violet-400 uppercase tracking-wide">This Week</p>
+        <p class="text-2xl font-bold text-violet-300 mt-1">${{ "%.2f"|format(report.weekly_spend) }}</p>
+        <p class="text-xs text-violet-500 mt-1">{{ report.week_label }}</p>
     </div>
-    <div class="bg-white rounded-lg border border-gray-200 p-5">
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Compute</p>
-        <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.2f"|format(report.total_compute) }}</p>
+        <p class="text-2xl font-bold text-gray-200 mt-1">${{ "%.2f"|format(report.total_compute) }}</p>
     </div>
-    <div class="bg-white rounded-lg border border-gray-200 p-5">
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Storage</p>
-        <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.2f"|format(report.total_storage) }}</p>
+        <p class="text-2xl font-bold text-gray-200 mt-1">${{ "%.2f"|format(report.total_storage) }}</p>
     </div>
-    <div class="bg-amber-50 rounded-lg border border-amber-200 p-5">
-        <p class="text-xs font-medium text-amber-600 uppercase tracking-wide">Burn Rate</p>
-        <p class="text-2xl font-bold text-amber-700 mt-1">${{ "%.2f"|format(report.burn_per_hr) }}<span class="text-sm font-medium text-amber-500">/hr</span></p>
+    <div class="bg-amber-950/40 rounded-lg border border-amber-800/50 p-5">
+        <p class="text-xs font-medium text-amber-400 uppercase tracking-wide">Burn Rate</p>
+        <p class="text-2xl font-bold text-amber-300 mt-1">${{ "%.2f"|format(report.burn_per_hr) }}<span class="text-sm font-medium text-amber-500">/hr</span></p>
     </div>
 </div>
 
@@ -54,16 +54,16 @@
 {% if report.projection %}
 <div class="mb-10">
     <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-semibold text-gray-900">Spend Projection</h2>
+        <h2 class="text-lg font-semibold text-gray-100">Spend Projection</h2>
         <div class="text-sm">
             <span class="text-gray-500">End-of-month estimate:</span>
-            <span class="font-semibold {% if report.projection.over_budget %}text-red-600{% else %}text-green-600{% endif %}">
+            <span class="font-semibold {% if report.projection.over_budget %}text-red-400{% else %}text-emerald-400{% endif %}">
                 ${{ "%.0f"|format(report.projection.eom_projected) }}
             </span>
-            <span class="text-gray-400">/ ${{ "%.0f"|format(report.projection.budget) }} budget</span>
+            <span class="text-gray-600">/ ${{ "{:,}".format(report.projection.budget) }} budget</span>
         </div>
     </div>
-    <div class="bg-white rounded-lg border border-gray-200 p-5">
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-5">
         <canvas id="projectionChart" height="100"></canvas>
     </div>
 </div>
@@ -74,9 +74,11 @@
     const budget = {{ report.projection.budget_json|safe }};
     const daysElapsed = {{ report.projection.days_elapsed }};
 
-    // Split projected into actual (up to today) and forecast (today onward)
     const actual = projected.map((v, i) => i < daysElapsed ? v : null);
     const forecast = projected.map((v, i) => i >= daysElapsed - 1 ? v : null);
+
+    Chart.defaults.color = '#9ca3af';
+    Chart.defaults.borderColor = '#1f2937';
 
     new Chart(document.getElementById('projectionChart'), {
         type: 'line',
@@ -86,8 +88,8 @@
                 {
                     label: 'Actual',
                     data: actual,
-                    borderColor: '#4f46e5',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    borderColor: '#818cf8',
+                    backgroundColor: 'rgba(129, 140, 248, 0.08)',
                     borderWidth: 2.5,
                     fill: true,
                     pointRadius: 0,
@@ -96,7 +98,7 @@
                 {
                     label: 'Projected',
                     data: forecast,
-                    borderColor: '#4f46e5',
+                    borderColor: '#818cf8',
                     borderWidth: 2,
                     borderDash: [6, 4],
                     fill: false,
@@ -106,7 +108,7 @@
                 {
                     label: '$' + budget[0].toLocaleString() + ' Budget',
                     data: budget,
-                    borderColor: '#ef4444',
+                    borderColor: '#f87171',
                     borderWidth: 1.5,
                     borderDash: [4, 4],
                     fill: false,
@@ -118,8 +120,13 @@
             responsive: true,
             interaction: { intersect: false, mode: 'index' },
             plugins: {
-                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
+                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, color: '#9ca3af' } },
                 tooltip: {
+                    backgroundColor: '#1f2937',
+                    borderColor: '#374151',
+                    borderWidth: 1,
+                    titleColor: '#e5e7eb',
+                    bodyColor: '#d1d5db',
                     callbacks: {
                         label: function(ctx) {
                             if (ctx.parsed.y == null) return null;
@@ -129,10 +136,12 @@
                 }
             },
             scales: {
-                x: { grid: { display: false } },
+                x: { grid: { color: '#111827' }, ticks: { color: '#6b7280' } },
                 y: {
                     beginAtZero: true,
+                    grid: { color: '#111827' },
                     ticks: {
+                        color: '#6b7280',
                         callback: function(v) { return '$' + v.toLocaleString(); }
                     }
                 }
@@ -145,38 +154,38 @@
 
 <!-- Currently Running -->
 <div class="mb-10">
-    <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-        <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+    <h2 class="text-lg font-semibold text-gray-100 mb-3 flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
         Currently Running
-        <span class="text-sm font-normal text-gray-400">({{ report.running_pods|length }})</span>
+        <span class="text-sm font-normal text-gray-500">({{ report.running_pods|length }})</span>
     </h2>
     {% if report.running_pods %}
-    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200">
-                        <th class="text-left px-4 py-3 font-medium text-gray-600">Pod Name</th>
-                        <th class="text-left px-4 py-3 font-medium text-gray-600">GPU</th>
-                        <th class="text-right px-4 py-3 font-medium text-gray-600">Uptime (hrs)</th>
-                        <th class="text-right px-4 py-3 font-medium text-gray-600">$/hr</th>
-                        <th class="text-right px-4 py-3 font-medium text-gray-600">Compute</th>
-                        <th class="text-right px-4 py-3 font-medium text-gray-600">Storage</th>
-                        <th class="text-right px-4 py-3 font-medium text-gray-600">Total</th>
+                    <tr class="bg-gray-900 border-b border-gray-800">
+                        <th class="text-left px-4 py-3 font-medium text-gray-400">Pod Name</th>
+                        <th class="text-left px-4 py-3 font-medium text-gray-400">GPU</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-400">Uptime (hrs)</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-400">$/hr</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-400">Compute</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-400">Storage</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-400">Total</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody class="divide-y divide-gray-800/50">
                     {% for pod in report.running_pods %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 font-medium text-gray-900">{{ pod.name }}</td>
-                        <td class="px-4 py-3 text-gray-600">
+                    <tr class="hover:bg-gray-800/50 transition-colors">
+                        <td class="px-4 py-3 font-medium text-gray-200">{{ pod.name }}</td>
+                        <td class="px-4 py-3 text-gray-400">
                             {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} &times;{{ pod.gpu_count }}{% endif %}
                         </td>
-                        <td class="px-4 py-3 text-right text-gray-600">{{ pod.uptime_hours }}</td>
-                        <td class="px-4 py-3 text-right text-amber-600 font-medium">${{ "%.2f"|format(pod.cost_per_hr) }}</td>
-                        <td class="px-4 py-3 text-right text-gray-600">${{ "%.2f"|format(pod.compute_cost) }}</td>
-                        <td class="px-4 py-3 text-right text-gray-600">${{ "%.2f"|format(pod.storage_cost) }}</td>
-                        <td class="px-4 py-3 text-right font-medium text-gray-900">${{ "%.2f"|format(pod.total_cost) }}</td>
+                        <td class="px-4 py-3 text-right text-gray-400">{{ pod.uptime_hours }}</td>
+                        <td class="px-4 py-3 text-right text-amber-400 font-medium">${{ "%.2f"|format(pod.cost_per_hr) }}</td>
+                        <td class="px-4 py-3 text-right text-gray-400">${{ "%.2f"|format(pod.compute_cost) }}</td>
+                        <td class="px-4 py-3 text-right text-gray-400">${{ "%.2f"|format(pod.storage_cost) }}</td>
+                        <td class="px-4 py-3 text-right font-medium text-gray-200">${{ "%.2f"|format(pod.total_cost) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -184,8 +193,8 @@
         </div>
     </div>
     {% else %}
-    <div class="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <p class="text-gray-400">No pods currently running{% if selected_user %} for {{ selected_user }}{% endif %}.</p>
+    <div class="bg-gray-900 rounded-lg border border-gray-800 p-8 text-center">
+        <p class="text-gray-500">No pods currently running{% if selected_user %} for {{ selected_user }}{% endif %}.</p>
     </div>
     {% endif %}
 </div>
@@ -193,36 +202,36 @@
 <!-- Stopped Pods -->
 {% if report.stopped_pods %}
 <div>
-    <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-        <span class="inline-block w-2 h-2 rounded-full bg-gray-400"></span>
+    <h2 class="text-lg font-semibold text-gray-100 mb-3 flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-gray-600"></span>
         Stopped
-        <span class="text-sm font-normal text-gray-400">({{ report.stopped_pods|length }})</span>
+        <span class="text-sm font-normal text-gray-500">({{ report.stopped_pods|length }})</span>
     </h2>
-    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div class="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200">
-                        <th class="text-left px-4 py-3 font-medium text-gray-600">Pod Name</th>
-                        <th class="text-left px-4 py-3 font-medium text-gray-600">GPU</th>
-                        <th class="text-right px-4 py-3 font-medium text-gray-600">Storage Cost</th>
+                    <tr class="bg-gray-900 border-b border-gray-800">
+                        <th class="text-left px-4 py-3 font-medium text-gray-400">Pod Name</th>
+                        <th class="text-left px-4 py-3 font-medium text-gray-400">GPU</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-400">Storage Cost</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody class="divide-y divide-gray-800/50">
                     {% for pod in report.stopped_pods %}
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-gray-800/50 transition-colors">
                         <td class="px-4 py-3 font-medium text-gray-500">{{ pod.name }}</td>
-                        <td class="px-4 py-3 text-gray-400">
+                        <td class="px-4 py-3 text-gray-600">
                             {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} &times;{{ pod.gpu_count }}{% endif %}
                         </td>
-                        <td class="px-4 py-3 text-right text-gray-600">${{ "%.2f"|format(pod.storage_cost) }}</td>
+                        <td class="px-4 py-3 text-right text-gray-400">${{ "%.2f"|format(pod.storage_cost) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
-                    <tr class="bg-gray-50 border-t border-gray-200 font-semibold">
-                        <td class="px-4 py-3" colspan="2">Storage Total</td>
-                        <td class="px-4 py-3 text-right">${{ "%.2f"|format(report.stopped_pods|sum(attribute='storage_cost')|round(2)) }}</td>
+                    <tr class="bg-gray-900 border-t border-gray-800 font-semibold">
+                        <td class="px-4 py-3 text-gray-300" colspan="2">Storage Total</td>
+                        <td class="px-4 py-3 text-right text-gray-300">${{ "%.2f"|format(report.stopped_pods|sum(attribute='storage_cost')|round(2)) }}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -232,8 +241,8 @@
 {% endif %}
 
 {% if not report.running_pods and not report.stopped_pods %}
-<div class="bg-white rounded-lg border border-gray-200 p-12 text-center">
-    <p class="text-gray-500">No pods found{% if selected_user %} for <span class="font-medium">{{ selected_user }}</span>{% endif %}.</p>
+<div class="bg-gray-900 rounded-lg border border-gray-800 p-12 text-center">
+    <p class="text-gray-500">No pods found{% if selected_user %} for <span class="font-medium text-gray-400">{{ selected_user }}</span>{% endif %}.</p>
 </div>
 {% endif %}
 {% endblock %}
