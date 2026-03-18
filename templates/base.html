@@ -7,7 +7,7 @@
     <title>tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,{% filter urlencode %}<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23a8967a'/><polyline points='7,21 13,14 18,17 25,9' fill='none' stroke='%23f5f0e8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>{% endfilter %}">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,{% filter urlencode %}<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23486a8c'/><polyline points='7,21 13,14 18,17 25,9' fill='none' stroke='%23f0ebe3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>{% endfilter %}">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
@@ -17,28 +17,43 @@
         theme: {
             extend: {
                 colors: {
-                    stone: {
-                        925: '#1c1a17',
+                    clay: {
+                        50:  '#f0ebe3',
+                        100: '#e6dfd4',
+                        200: '#d4cabb',
+                        300: '#b8aa96',
+                        400: '#9a8d7a',
+                        500: '#7d7268',
+                        600: '#5e554d',
+                        700: '#443e38',
+                        800: '#2e2a26',
+                        850: '#242120',
+                        900: '#1c1a17',
                         950: '#141210',
-                    }
+                    },
+                    ceramic: {
+                        400: '#6b9fc4',
+                        500: '#486a8c',
+                        600: '#3a5671',
+                    },
                 }
             }
         }
     }
     </script>
 </head>
-<body class="bg-stone-925 text-stone-400 min-h-screen flex flex-col antialiased">
-    <nav class="border-b border-stone-800/60 px-6 py-3.5">
+<body class="bg-clay-900 text-clay-300 min-h-screen flex flex-col antialiased">
+    <nav class="border-b border-clay-800 px-6 py-3.5">
         <div class="max-w-5xl mx-auto flex items-center justify-between">
             <a href="/" class="flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-5 h-5">
-                    <rect width="32" height="32" rx="8" fill="#a8967a"/>
-                    <polyline points="7,21 13,14 18,17 25,9" fill="none" stroke="#f5f0e8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <rect width="32" height="32" rx="8" fill="#486a8c"/>
+                    <polyline points="7,21 13,14 18,17 25,9" fill="none" stroke="#f0ebe3" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                <span class="text-[13px] font-medium text-stone-500 tracking-wide lowercase">tracker</span>
+                <span class="text-[13px] font-medium text-clay-400 tracking-wide lowercase">tracker</span>
             </a>
             {% if session.get("authenticated") %}
-            <a href="/logout" class="text-[11px] text-stone-600 hover:text-stone-400 transition-colors">logout</a>
+            <a href="/logout" class="text-[11px] text-clay-600 hover:text-clay-300 transition-colors">logout</a>
             {% endif %}
         </div>
     </nav>
@@ -47,8 +62,8 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="border-t border-stone-800/60 px-6 py-3">
-        <div class="max-w-5xl mx-auto flex items-center justify-between text-[11px] text-stone-700">
+    <footer class="border-t border-clay-800 px-6 py-3">
+        <div class="max-w-5xl mx-auto flex items-center justify-between text-[11px] text-clay-600">
             <span>estimated costs, prorated to current date</span>
             <span>refreshes every 5m</span>
         </div>

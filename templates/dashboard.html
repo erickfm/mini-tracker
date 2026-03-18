@@ -4,14 +4,14 @@
 <!-- Header -->
 <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
     <div>
-        <p class="text-[11px] text-stone-600 uppercase tracking-widest mb-1">{{ report.month_label }}{% if not report.is_current_month %} <span class="text-stone-500">archive</span>{% endif %}</p>
-        <h1 class="text-lg font-medium text-stone-300">{{ report.user }}</h1>
+        <p class="text-[11px] text-clay-500 uppercase tracking-widest mb-1">{{ report.month_label }}{% if not report.is_current_month %} <span class="text-clay-600">archive</span>{% endif %}</p>
+        <h1 class="text-lg font-medium text-clay-100">{{ report.user }}</h1>
     </div>
     <div class="flex items-center gap-2">
         {% if report.available_months|length > 1 %}
         <select
             onchange="var u = document.getElementById('userSelect').value; window.location = '/?month=' + this.value + (u ? '&user=' + u : '')"
-            class="w-full sm:w-36 rounded-lg border border-stone-800 bg-stone-900/80 text-stone-400 px-3 py-1.5 text-xs focus:border-stone-600 focus:ring-1 focus:ring-stone-600 focus:outline-none"
+            class="w-full sm:w-36 rounded-lg border border-clay-700 bg-clay-850 text-clay-200 px-3 py-1.5 text-xs focus:border-ceramic-500 focus:ring-1 focus:ring-ceramic-500 focus:outline-none"
         >
             {% for m in report.available_months %}
             <option value="{{ m }}" {% if (selected_month and selected_month == m) or (not selected_month and loop.first) %}selected{% endif %}>{{ m }}</option>
@@ -21,7 +21,7 @@
         <select
             id="userSelect"
             onchange="var m = '{{ selected_month or report.month_value }}'; window.location = '/?month=' + m + (this.value ? '&user=' + this.value : '')"
-            class="w-full sm:w-36 rounded-lg border border-stone-800 bg-stone-900/80 text-stone-400 px-3 py-1.5 text-xs focus:border-stone-600 focus:ring-1 focus:ring-stone-600 focus:outline-none"
+            class="w-full sm:w-36 rounded-lg border border-clay-700 bg-clay-850 text-clay-200 px-3 py-1.5 text-xs focus:border-ceramic-500 focus:ring-1 focus:ring-ceramic-500 focus:outline-none"
         >
             <option value="" {% if not selected_user %}selected{% endif %}>all users</option>
             {% for u in report.all_users %}
@@ -33,28 +33,28 @@
 
 <!-- Summary Cards -->
 <div class="grid grid-cols-2 sm:grid-cols-{{ 5 if report.is_current_month else 2 }} gap-3 mb-8">
-    <div class="bg-stone-900/80 rounded-xl border border-stone-800/60 p-4">
-        <p class="text-[10px] font-medium text-stone-600 uppercase tracking-widest">month</p>
-        <p class="text-xl font-semibold text-stone-200 mt-1 tabular-nums">${{ "%.2f"|format(report.total_spend) }}</p>
+    <div class="bg-clay-850 rounded-xl border border-clay-800 p-4">
+        <p class="text-[10px] font-medium text-clay-500 uppercase tracking-widest">month</p>
+        <p class="text-xl font-semibold text-ceramic-400 mt-1 tabular-nums">${{ "%.2f"|format(report.total_spend) }}</p>
     </div>
     {% if report.is_current_month and report.week_label %}
-    <div class="bg-stone-900/80 rounded-xl border border-stone-800/60 p-4">
-        <p class="text-[10px] font-medium text-stone-600 uppercase tracking-widest">week</p>
-        <p class="text-xl font-semibold text-stone-200 mt-1 tabular-nums">${{ "%.2f"|format(report.weekly_spend) }}</p>
-        <p class="text-[10px] text-stone-700 mt-0.5">{{ report.week_label }}</p>
+    <div class="bg-clay-850 rounded-xl border border-clay-800 p-4">
+        <p class="text-[10px] font-medium text-clay-500 uppercase tracking-widest">week</p>
+        <p class="text-xl font-semibold text-clay-100 mt-1 tabular-nums">${{ "%.2f"|format(report.weekly_spend) }}</p>
+        <p class="text-[10px] text-clay-600 mt-0.5">{{ report.week_label }}</p>
     </div>
     {% endif %}
     {% if report.terminated_spend > 0 and not selected_user %}
-    <div class="bg-stone-900/80 rounded-xl border border-stone-800/60 p-4">
-        <p class="text-[10px] font-medium text-stone-600 uppercase tracking-widest">unattributed</p>
-        <p class="text-xl font-semibold text-stone-400 mt-1 tabular-nums">${{ "%.2f"|format(report.terminated_spend) }}</p>
-        <p class="text-[10px] text-stone-700 mt-0.5">{{ report.terminated_count }} terminated</p>
+    <div class="bg-clay-850 rounded-xl border border-clay-800 p-4">
+        <p class="text-[10px] font-medium text-clay-500 uppercase tracking-widest">unattributed</p>
+        <p class="text-xl font-semibold text-clay-400 mt-1 tabular-nums">${{ "%.2f"|format(report.terminated_spend) }}</p>
+        <p class="text-[10px] text-clay-600 mt-0.5">{{ report.terminated_count }} terminated</p>
     </div>
     {% endif %}
     {% if report.is_current_month %}
-    <div class="bg-stone-900/80 rounded-xl border border-stone-800/60 p-4 col-span-2 sm:col-span-1">
-        <p class="text-[10px] font-medium text-stone-600 uppercase tracking-widest">burn rate</p>
-        <p class="text-xl font-semibold text-stone-200 mt-1 tabular-nums">${{ "%.2f"|format(report.burn_per_hr) }}<span class="text-xs font-normal text-stone-600">/hr</span></p>
+    <div class="bg-clay-850 rounded-xl border border-clay-800 p-4 col-span-2 sm:col-span-1">
+        <p class="text-[10px] font-medium text-clay-500 uppercase tracking-widest">burn rate</p>
+        <p class="text-xl font-semibold text-clay-100 mt-1 tabular-nums">${{ "%.2f"|format(report.burn_per_hr) }}<span class="text-xs font-normal text-clay-500">/hr</span></p>
     </div>
     {% endif %}
 </div>
@@ -63,16 +63,16 @@
 {% if report.projection %}
 <div class="mb-8">
     <div class="flex items-baseline justify-between mb-2">
-        <h2 class="text-[11px] font-medium text-stone-600 uppercase tracking-widest">projection <span class="normal-case text-stone-700 tracking-normal">based on current burn rate</span></h2>
+        <h2 class="text-[11px] font-medium text-clay-500 uppercase tracking-widest">projection <span class="normal-case text-clay-600 tracking-normal">based on current burn rate</span></h2>
         <div class="text-xs tabular-nums">
-            <span class="text-stone-600">eom</span>
-            <span class="font-medium {% if report.projection.over_budget %}text-red-400/70{% else %}text-stone-300{% endif %} ml-1">
+            <span class="text-clay-500">eom</span>
+            <span class="font-medium {% if report.projection.over_budget %}text-red-400/80{% else %}text-ceramic-400{% endif %} ml-1">
                 ${{ "%.0f"|format(report.projection.eom_projected) }}
             </span>
-            <span class="text-stone-700 ml-1">/ ${{ "{:,}".format(report.projection.budget) }}</span>
+            <span class="text-clay-600 ml-1">/ ${{ "{:,}".format(report.projection.budget) }}</span>
         </div>
     </div>
-    <div class="bg-stone-900/80 rounded-xl border border-stone-800/60 p-4">
+    <div class="bg-clay-850 rounded-xl border border-clay-800 p-4">
         <canvas id="projectionChart" height="90"></canvas>
     </div>
 </div>
@@ -88,7 +88,7 @@
     const forecast = projected.map((v, i) => i >= daysElapsed - 1 ? v : null);
     const todayPoint = labels.map((d, i) => i === daysElapsed - 1 ? currentSpend : null);
 
-    Chart.defaults.color = '#57534e';
+    Chart.defaults.color = '#7d7268';
     Chart.defaults.borderColor = 'rgba(168, 150, 122, 0.08)';
     Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
     Chart.defaults.font.size = 11;
@@ -101,8 +101,8 @@
                 {
                     label: 'Estimated',
                     data: estimated,
-                    borderColor: '#a8967a',
-                    backgroundColor: 'rgba(168, 150, 122, 0.05)',
+                    borderColor: '#6b9fc4',
+                    backgroundColor: 'rgba(107, 159, 196, 0.06)',
                     borderWidth: 2,
                     fill: true,
                     pointRadius: 0,
@@ -111,7 +111,7 @@
                 {
                     label: 'Forecast',
                     data: forecast,
-                    borderColor: '#a8967a',
+                    borderColor: '#6b9fc4',
                     borderWidth: 1.5,
                     borderDash: [5, 3],
                     fill: false,
@@ -121,8 +121,8 @@
                 {
                     label: 'Today ($' + currentSpend.toLocaleString(undefined, {maximumFractionDigits: 0}) + ')',
                     data: todayPoint,
-                    borderColor: '#a8967a',
-                    backgroundColor: '#d6cfc4',
+                    borderColor: '#6b9fc4',
+                    backgroundColor: '#f0ebe3',
                     borderWidth: 0,
                     pointRadius: 4,
                     pointHoverRadius: 6,
@@ -131,7 +131,7 @@
                 {
                     label: '$' + budget[0].toLocaleString() + ' budget',
                     data: budget,
-                    borderColor: 'rgba(183, 110, 96, 0.45)',
+                    borderColor: 'rgba(183, 110, 96, 0.5)',
                     borderWidth: 1,
                     borderDash: [3, 3],
                     fill: false,
@@ -145,14 +145,14 @@
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { usePointStyle: true, pointStyleWidth: 8, padding: 16, boxHeight: 6, color: '#78716c', font: { size: 10 } }
+                    labels: { usePointStyle: true, pointStyleWidth: 8, padding: 16, boxHeight: 6, color: '#9a8d7a', font: { size: 10 } }
                 },
                 tooltip: {
                     backgroundColor: '#1c1a17',
-                    borderColor: 'rgba(168, 150, 122, 0.15)',
+                    borderColor: 'rgba(168, 150, 122, 0.2)',
                     borderWidth: 1,
-                    titleColor: '#d6d3d1',
-                    bodyColor: '#a8a29e',
+                    titleColor: '#f0ebe3',
+                    bodyColor: '#d4cabb',
                     titleFont: { size: 11 },
                     bodyFont: { size: 11 },
                     padding: 10,
@@ -169,13 +169,13 @@
             scales: {
                 x: {
                     grid: { display: false },
-                    ticks: { color: '#44403c', font: { size: 10 }, maxTicksLimit: 10 }
+                    ticks: { color: '#5e554d', font: { size: 10 }, maxTicksLimit: 10 }
                 },
                 y: {
                     beginAtZero: true,
                     grid: { color: 'rgba(168, 150, 122, 0.06)' },
                     ticks: {
-                        color: '#44403c',
+                        color: '#5e554d',
                         font: { size: 10 },
                         callback: function(v) { return '$' + v.toLocaleString(); }
                     }
@@ -191,48 +191,48 @@
 {% if report.is_current_month %}
 <div class="mb-8">
     <div class="flex items-center gap-2 mb-2">
-        <span class="inline-block w-1.5 h-1.5 rounded-full bg-stone-500"></span>
-        <h2 class="text-[11px] font-medium text-stone-600 uppercase tracking-widest">running</h2>
-        <span class="text-[10px] text-stone-700">{{ report.running_pods|length }}</span>
+        <span class="inline-block w-1.5 h-1.5 rounded-full bg-ceramic-400"></span>
+        <h2 class="text-[11px] font-medium text-clay-500 uppercase tracking-widest">running</h2>
+        <span class="text-[10px] text-clay-600">{{ report.running_pods|length }}</span>
     </div>
     {% if report.running_pods %}
-    <div class="bg-stone-900/80 rounded-xl border border-stone-800/60 overflow-hidden">
+    <div class="bg-clay-850 rounded-xl border border-clay-800 overflow-hidden">
         <table class="w-full text-xs">
             <thead>
-                <tr class="border-b border-stone-800/60">
-                    <th class="text-left px-4 py-2.5 font-medium text-stone-600">pod</th>
-                    <th class="text-left px-4 py-2.5 font-medium text-stone-600">gpu</th>
-                    <th class="text-right px-4 py-2.5 font-medium text-stone-600">uptime</th>
-                    <th class="text-right px-4 py-2.5 font-medium text-stone-600">$/hr</th>
-                    <th class="text-right px-4 py-2.5 font-medium text-stone-600">cost</th>
+                <tr class="border-b border-clay-800">
+                    <th class="text-left px-4 py-2.5 font-medium text-clay-500">pod</th>
+                    <th class="text-left px-4 py-2.5 font-medium text-clay-500">gpu</th>
+                    <th class="text-right px-4 py-2.5 font-medium text-clay-500">uptime</th>
+                    <th class="text-right px-4 py-2.5 font-medium text-clay-500">$/hr</th>
+                    <th class="text-right px-4 py-2.5 font-medium text-clay-500">cost</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-stone-800/40">
+            <tbody class="divide-y divide-clay-800/50">
                 {% for pod in report.running_pods %}
-                <tr class="hover:bg-stone-800/20 transition-colors">
+                <tr class="hover:bg-clay-800/30 transition-colors">
                     <td class="px-4 py-2.5">
-                        <div class="font-medium text-stone-300">
+                        <div class="font-medium text-clay-100">
                             {{ pod.name }}
                             {% if pod.long_running %}
-                            <span class="ml-1.5 inline-flex items-center rounded-full bg-stone-800 border border-stone-700 px-1.5 py-0 text-[9px] font-medium text-stone-400" title="Running for over 24 hours">24h+</span>
+                            <span class="ml-1.5 inline-flex items-center rounded-full bg-clay-800 border border-clay-700 px-1.5 py-0 text-[9px] font-medium text-clay-400" title="Running for over 24 hours">24h+</span>
                             {% endif %}
                         </div>
-                        <div class="text-[10px] text-stone-700 font-mono mt-0.5">{{ pod.id }}</div>
+                        <div class="text-[10px] text-clay-600 font-mono mt-0.5">{{ pod.id }}</div>
                     </td>
-                    <td class="px-4 py-2.5 text-stone-500">
-                        {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} <span class="text-stone-600">&times;{{ pod.gpu_count }}</span>{% endif %}
+                    <td class="px-4 py-2.5 text-clay-300">
+                        {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} <span class="text-clay-500">&times;{{ pod.gpu_count }}</span>{% endif %}
                     </td>
-                    <td class="px-4 py-2.5 text-right text-stone-500 tabular-nums">{{ pod.uptime_hours }}h</td>
-                    <td class="px-4 py-2.5 text-right text-stone-400 tabular-nums">${{ "%.2f"|format(pod.cost_per_hr) }}</td>
-                    <td class="px-4 py-2.5 text-right font-medium text-stone-300 tabular-nums">${{ "%.2f"|format(pod.total_cost) }}</td>
+                    <td class="px-4 py-2.5 text-right text-clay-300 tabular-nums">{{ pod.uptime_hours }}h</td>
+                    <td class="px-4 py-2.5 text-right text-clay-300 tabular-nums">${{ "%.2f"|format(pod.cost_per_hr) }}</td>
+                    <td class="px-4 py-2.5 text-right font-medium text-clay-100 tabular-nums">${{ "%.2f"|format(pod.total_cost) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <div class="bg-stone-900/80 rounded-xl border border-stone-800/60 p-8 text-center">
-        <p class="text-stone-600 text-xs">no pods running{% if selected_user %} for {{ selected_user }}{% endif %}</p>
+    <div class="bg-clay-850 rounded-xl border border-clay-800 p-8 text-center">
+        <p class="text-clay-500 text-xs">no pods running{% if selected_user %} for {{ selected_user }}{% endif %}</p>
     </div>
     {% endif %}
 </div>
@@ -243,46 +243,46 @@
 {% if all_pods %}
 <div class="mb-8">
     <div class="flex items-center gap-2 mb-2">
-        <h2 class="text-[11px] font-medium text-stone-600 uppercase tracking-widest">all pods billed</h2>
-        <span class="text-[10px] text-stone-700">{{ all_pods|length }}</span>
+        <h2 class="text-[11px] font-medium text-clay-500 uppercase tracking-widest">all pods billed</h2>
+        <span class="text-[10px] text-clay-600">{{ all_pods|length }}</span>
     </div>
-    <div class="bg-stone-900/80 rounded-xl border border-stone-800/60 overflow-hidden">
+    <div class="bg-clay-850 rounded-xl border border-clay-800 overflow-hidden">
         <table class="w-full text-xs">
             <thead>
-                <tr class="border-b border-stone-800/60">
-                    <th class="text-left px-4 py-2.5 font-medium text-stone-600">pod</th>
-                    <th class="text-left px-4 py-2.5 font-medium text-stone-600">status</th>
-                    <th class="text-left px-4 py-2.5 font-medium text-stone-600">gpu</th>
-                    <th class="text-right px-4 py-2.5 font-medium text-stone-600">cost</th>
+                <tr class="border-b border-clay-800">
+                    <th class="text-left px-4 py-2.5 font-medium text-clay-500">pod</th>
+                    <th class="text-left px-4 py-2.5 font-medium text-clay-500">status</th>
+                    <th class="text-left px-4 py-2.5 font-medium text-clay-500">gpu</th>
+                    <th class="text-right px-4 py-2.5 font-medium text-clay-500">cost</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-stone-800/40">
+            <tbody class="divide-y divide-clay-800/50">
                 {% for pod in all_pods|sort(attribute='total_cost', reverse=true) %}
-                <tr class="hover:bg-stone-800/20 transition-colors">
+                <tr class="hover:bg-clay-800/30 transition-colors">
                     <td class="px-4 py-2.5">
-                        <div class="font-medium {% if pod.status == 'Running' %}text-stone-300{% else %}text-stone-500{% endif %}">{{ pod.name }}</div>
-                        <div class="text-[10px] text-stone-700 font-mono mt-0.5">{{ pod.id }}</div>
+                        <div class="font-medium {% if pod.status == 'Running' %}text-clay-100{% else %}text-clay-400{% endif %}">{{ pod.name }}</div>
+                        <div class="text-[10px] text-clay-600 font-mono mt-0.5">{{ pod.id }}</div>
                     </td>
                     <td class="px-4 py-2.5">
                         {% if pod.status == "Running" %}
-                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-stone-400"></span>
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-ceramic-400"></span>
                         {% elif pod.status == "Terminated" %}
-                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-stone-700"></span>
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-clay-600"></span>
                         {% else %}
-                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-stone-700"></span>
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-clay-600"></span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-2.5 text-stone-500">
-                        {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} <span class="text-stone-600">&times;{{ pod.gpu_count }}</span>{% endif %}
+                    <td class="px-4 py-2.5 text-clay-400">
+                        {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} <span class="text-clay-500">&times;{{ pod.gpu_count }}</span>{% endif %}
                     </td>
-                    <td class="px-4 py-2.5 text-right font-medium text-stone-300 tabular-nums">${{ "%.2f"|format(pod.total_cost) }}</td>
+                    <td class="px-4 py-2.5 text-right font-medium text-clay-100 tabular-nums">${{ "%.2f"|format(pod.total_cost) }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot>
-                <tr class="border-t border-stone-800/60">
-                    <td class="px-4 py-2.5 text-stone-400 font-medium" colspan="3">total</td>
-                    <td class="px-4 py-2.5 text-right text-stone-200 font-semibold tabular-nums">${{ "%.2f"|format(report.total_spend) }}</td>
+                <tr class="border-t border-clay-800">
+                    <td class="px-4 py-2.5 text-clay-300 font-medium" colspan="3">total</td>
+                    <td class="px-4 py-2.5 text-right text-ceramic-400 font-semibold tabular-nums">${{ "%.2f"|format(report.total_spend) }}</td>
                 </tr>
             </tfoot>
         </table>
@@ -291,8 +291,8 @@
 {% endif %}
 
 {% if not all_pods and report.terminated_spend == 0 %}
-<div class="bg-stone-900/80 rounded-xl border border-stone-800/60 p-12 text-center">
-    <p class="text-stone-600 text-xs">no billing data{% if selected_user %} for <span class="text-stone-500">{{ selected_user }}</span>{% endif %}</p>
+<div class="bg-clay-850 rounded-xl border border-clay-800 p-12 text-center">
+    <p class="text-clay-500 text-xs">no billing data{% if selected_user %} for <span class="text-clay-300">{{ selected_user }}</span>{% endif %}</p>
 </div>
 {% endif %}
 {% endblock %}
