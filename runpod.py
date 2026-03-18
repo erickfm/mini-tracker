@@ -67,11 +67,16 @@ def fetch_pods(api_key):
 
 
 def parse_pod_user(pod_name):
-    """Extract the user segment from a pod name like '<project>-<user>-<id>'.
+    """Extract the user segment from a pod name like '<project>-<user>-<rest>'
+    or '<project>_<user>_<rest>'.
 
-    Returns the user string, or None if the name doesn't match the convention.
+    Splits on '_' first (dominant convention), falls back to '-'.
+    Returns the user string, or None if the name doesn't match.
     """
-    parts = pod_name.split("-")
+    if "_" in pod_name:
+        parts = pod_name.split("_")
+    else:
+        parts = pod_name.split("-")
     if len(parts) >= 3:
         return parts[1]
     return None
