@@ -26,7 +26,7 @@ def login():
 
     error = None
     if request.method == "POST":
-        if request.form.get("password") == app_password:
+        if secrets.compare_digest(request.form.get("password", ""), app_password):
             session["authenticated"] = True
             return redirect(url_for("dashboard"))
         error = "Wrong password."

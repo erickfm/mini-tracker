@@ -4,31 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="refresh" content="300">
-    <title>Tracker — RunPod Spend</title>
+    <title>tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,{% filter urlencode %}<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236366f1'/><polyline points='6,22 12,14 18,18 26,8' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/><circle cx='26' cy='8' r='2.5' fill='%2334d399'/></svg>{% endfilter %}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(12px); }
+        .glow-green { box-shadow: 0 0 8px rgba(52, 211, 153, 0.3); }
+        .glow-red { box-shadow: 0 0 8px rgba(248, 113, 113, 0.2); }
+    </style>
     <script>
-    tailwind.config = {
-        darkMode: 'class',
-    }
+    tailwind.config = { darkMode: 'class' }
     </script>
 </head>
-<body class="dark bg-gray-950 text-gray-100 min-h-screen flex flex-col">
-    <nav class="bg-gray-900 border-b border-gray-800 px-6 py-4">
+<body class="dark bg-[#0a0a0f] text-gray-300 min-h-screen flex flex-col antialiased">
+    <nav class="border-b border-white/5 px-6 py-3">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
-            <a href="/" class="flex items-center gap-2.5 text-lg font-semibold text-gray-100 tracking-tight">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-7 h-7">
+            <a href="/" class="flex items-center gap-2 group">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-6 h-6 transition-transform group-hover:scale-110">
                     <rect width="32" height="32" rx="8" fill="#6366f1"/>
                     <polyline points="6,22 12,14 18,18 26,8" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <circle cx="26" cy="8" r="2.5" fill="#34d399"/>
                 </svg>
-                Tracker
+                <span class="text-sm font-semibold text-gray-400 tracking-wide lowercase">tracker</span>
             </a>
             <div class="flex items-center gap-4">
-                <span class="text-xs text-gray-500">RunPod Spend Dashboard</span>
                 {% if session.get("authenticated") %}
-                <a href="/logout" class="text-xs text-gray-500 hover:text-gray-300 transition-colors">Logout</a>
+                <a href="/logout" class="text-xs text-gray-600 hover:text-gray-400 transition-colors">logout</a>
                 {% endif %}
             </div>
         </div>
@@ -38,10 +42,10 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="border-t border-gray-800 px-6 py-4">
-        <div class="max-w-6xl mx-auto flex items-center justify-between text-xs text-gray-600">
-            <span>Estimated costs, prorated to current date</span>
-            <span>Auto-refreshes every 5 minutes</span>
+    <footer class="border-t border-white/5 px-6 py-3">
+        <div class="max-w-6xl mx-auto flex items-center justify-between text-[11px] text-gray-700">
+            <span>estimated costs, prorated to current date</span>
+            <span>refreshes every 5m</span>
         </div>
     </footer>
 </body>

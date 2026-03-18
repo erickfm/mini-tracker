@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="mt-12 max-w-lg mx-auto">
-    <div class="bg-red-950/50 border border-red-800/50 rounded-lg p-6">
-        <h2 class="text-red-400 font-semibold text-lg mb-2">Something went wrong</h2>
-        <p class="text-red-300/80 text-sm">{{ message }}</p>
+<div class="mt-16 max-w-md mx-auto">
+    <div class="glass rounded-xl border border-red-500/20 p-5">
+        <p class="text-[10px] font-medium text-red-400/80 uppercase tracking-widest mb-2">error</p>
+        <p class="text-red-300/80 text-xs leading-relaxed">{{ message }}</p>
     </div>
-    <p class="text-gray-600 text-sm mt-4 text-center">
-        Check that <code class="bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded text-xs">RUNPOD_API_KEY</code> is set correctly and try again.
+    <p class="text-gray-700 text-[11px] mt-3 text-center">
+        check that <code class="text-gray-500 font-mono text-[10px]">RUNPOD_API_KEY</code> is set correctly
     </p>
 </div>
 {% endblock %}

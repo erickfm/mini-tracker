@@ -139,6 +139,7 @@ def calculate_pod_cost(pod, days_elapsed, days_in_month):
         "compute_cost": round(compute_cost, 2),
         "storage_cost": round(storage_cost, 2),
         "total_cost": round(total_cost, 2),
+        "long_running": is_running and uptime_hours > 24,
     }
 
 
@@ -181,7 +182,7 @@ def build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month, budg
 
     From spend(N) and spend'(N) we solve for a and b.
     """
-    if days_elapsed <= 0 or total_spend <= 0:
+    if days_elapsed <= 0 or total_spend <= 0 or burn_per_hr <= 0:
         return None
 
     daily_burn = burn_per_hr * 24
@@ -189,10 +190,7 @@ def build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month, budg
 
     # b = (daily_burn * t) / total_spend
     # Clamp b to reasonable range [0.5, 3] to avoid wild extrapolations
-    if total_spend > 0:
-        b = max(0.5, min(3.0, (daily_burn * t) / total_spend))
-    else:
-        b = 1.0
+    b = max(0.5, min(3.0, (daily_burn * t) / total_spend))
 
     # a = total_spend / t^b
     a = total_spend / (t ** b) if t > 0 else 0
