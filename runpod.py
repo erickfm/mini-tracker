@@ -230,6 +230,7 @@ def get_spend_report(api_key, user=None, month=None):
                 continue
 
             enriched.append({
+                "id": pid,
                 "name": info["name"],
                 "user": pod_user,
                 "status": info["status"],

@@ -210,11 +210,14 @@
             <tbody class="divide-y divide-white/[0.03]">
                 {% for pod in report.running_pods %}
                 <tr class="hover:bg-white/[0.02] transition-colors">
-                    <td class="px-4 py-2.5 font-medium text-gray-300">
-                        {{ pod.name }}
-                        {% if pod.long_running %}
-                        <span class="ml-1.5 inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-1.5 py-0 text-[9px] font-medium text-amber-400" title="Running for over 24 hours">24h+</span>
-                        {% endif %}
+                    <td class="px-4 py-2.5">
+                        <div class="font-medium text-gray-300">
+                            {{ pod.name }}
+                            {% if pod.long_running %}
+                            <span class="ml-1.5 inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-1.5 py-0 text-[9px] font-medium text-amber-400" title="Running for over 24 hours">24h+</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-[10px] text-gray-700 font-mono mt-0.5">{{ pod.id }}</div>
                     </td>
                     <td class="px-4 py-2.5 text-gray-500">
                         {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} <span class="text-gray-600">&times;{{ pod.gpu_count }}</span>{% endif %}
@@ -256,7 +259,10 @@
             <tbody class="divide-y divide-white/[0.03]">
                 {% for pod in all_pods|sort(attribute='total_cost', reverse=true) %}
                 <tr class="hover:bg-white/[0.02] transition-colors">
-                    <td class="px-4 py-2.5 font-medium {% if pod.status == 'Running' %}text-gray-300{% else %}text-gray-500{% endif %}">{{ pod.name }}</td>
+                    <td class="px-4 py-2.5">
+                        <div class="font-medium {% if pod.status == 'Running' %}text-gray-300{% else %}text-gray-500{% endif %}">{{ pod.name }}</div>
+                        <div class="text-[10px] text-gray-700 font-mono mt-0.5">{{ pod.id }}</div>
+                    </td>
                     <td class="px-4 py-2.5">
                         {% if pod.status == "Running" %}
                         <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
