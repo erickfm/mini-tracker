@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mt-12 max-w-lg mx-auto">
+    <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+        <h2 class="text-red-800 font-semibold text-lg mb-2">Something went wrong</h2>
+        <p class="text-red-700 text-sm">{{ message }}</p>
+    </div>
+    <p class="text-gray-500 text-sm mt-4 text-center">
+        Check that <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">RUNPOD_API_KEY</code> is set correctly and try again.
+    </p>
+</div>
+{% endblock %}
