@@ -26,7 +26,7 @@
 </div>
 
 <!-- Summary Cards -->
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-10">
     <div class="bg-white rounded-lg border border-gray-200 p-5">
         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Compute</p>
         <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.2f"|format(report.total_compute) }}</p>
@@ -39,61 +39,101 @@
         <p class="text-xs font-medium text-indigo-600 uppercase tracking-wide">Total Spend</p>
         <p class="text-2xl font-bold text-indigo-700 mt-1">${{ "%.2f"|format(report.total_spend) }}</p>
     </div>
-</div>
-
-<!-- Pod Table -->
-{% if report.pods %}
-<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="bg-gray-50 border-b border-gray-200">
-                    <th class="text-left px-4 py-3 font-medium text-gray-600">Pod Name</th>
-                    <th class="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                    <th class="text-left px-4 py-3 font-medium text-gray-600">GPU</th>
-                    <th class="text-right px-4 py-3 font-medium text-gray-600">Uptime (hrs)</th>
-                    <th class="text-right px-4 py-3 font-medium text-gray-600">Compute</th>
-                    <th class="text-right px-4 py-3 font-medium text-gray-600">Storage</th>
-                    <th class="text-right px-4 py-3 font-medium text-gray-600">Total</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                {% for pod in report.pods %}
-                <tr class="hover:bg-gray-50">
-                    <td class="px-4 py-3 font-medium text-gray-900">{{ pod.name }}</td>
-                    <td class="px-4 py-3">
-                        {% if pod.status == "Running" %}
-                        <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">Running</span>
-                        {% else %}
-                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">Stopped</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-4 py-3 text-gray-600">
-                        {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} &times;{{ pod.gpu_count }}{% endif %}
-                    </td>
-                    <td class="px-4 py-3 text-right text-gray-600">
-                        {% if pod.status == "Running" %}{{ pod.uptime_hours }}{% else %}&mdash;{% endif %}
-                    </td>
-                    <td class="px-4 py-3 text-right text-gray-600">
-                        {% if pod.compute_cost > 0 %}${{ "%.2f"|format(pod.compute_cost) }}{% else %}&mdash;{% endif %}
-                    </td>
-                    <td class="px-4 py-3 text-right text-gray-600">${{ "%.2f"|format(pod.storage_cost) }}</td>
-                    <td class="px-4 py-3 text-right font-medium text-gray-900">${{ "%.2f"|format(pod.total_cost) }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="bg-gray-50 border-t border-gray-200 font-semibold">
-                    <td class="px-4 py-3" colspan="4">Total</td>
-                    <td class="px-4 py-3 text-right">${{ "%.2f"|format(report.total_compute) }}</td>
-                    <td class="px-4 py-3 text-right">${{ "%.2f"|format(report.total_storage) }}</td>
-                    <td class="px-4 py-3 text-right text-indigo-700">${{ "%.2f"|format(report.total_spend) }}</td>
-                </tr>
-            </tfoot>
-        </table>
+    <div class="bg-amber-50 rounded-lg border border-amber-200 p-5">
+        <p class="text-xs font-medium text-amber-600 uppercase tracking-wide">Burn Rate</p>
+        <p class="text-2xl font-bold text-amber-700 mt-1">${{ "%.2f"|format(report.burn_per_hr) }}<span class="text-sm font-medium text-amber-500">/hr</span></p>
     </div>
 </div>
-{% else %}
+
+<!-- Currently Running -->
+<div class="mb-10">
+    <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        Currently Running
+        <span class="text-sm font-normal text-gray-400">({{ report.running_pods|length }})</span>
+    </h2>
+    {% if report.running_pods %}
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200">
+                        <th class="text-left px-4 py-3 font-medium text-gray-600">Pod Name</th>
+                        <th class="text-left px-4 py-3 font-medium text-gray-600">GPU</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-600">Uptime (hrs)</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-600">$/hr</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-600">Compute</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-600">Storage</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-600">Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for pod in report.running_pods %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium text-gray-900">{{ pod.name }}</td>
+                        <td class="px-4 py-3 text-gray-600">
+                            {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} &times;{{ pod.gpu_count }}{% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-right text-gray-600">{{ pod.uptime_hours }}</td>
+                        <td class="px-4 py-3 text-right text-amber-600 font-medium">${{ "%.2f"|format(pod.cost_per_hr) }}</td>
+                        <td class="px-4 py-3 text-right text-gray-600">${{ "%.2f"|format(pod.compute_cost) }}</td>
+                        <td class="px-4 py-3 text-right text-gray-600">${{ "%.2f"|format(pod.storage_cost) }}</td>
+                        <td class="px-4 py-3 text-right font-medium text-gray-900">${{ "%.2f"|format(pod.total_cost) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg border border-gray-200 p-8 text-center">
+        <p class="text-gray-400">No pods currently running{% if selected_user %} for {{ selected_user }}{% endif %}.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Monthly Spend Breakdown (Stopped) -->
+{% if report.stopped_pods %}
+<div>
+    <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-gray-400"></span>
+        Stopped
+        <span class="text-sm font-normal text-gray-400">({{ report.stopped_pods|length }})</span>
+    </h2>
+    <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200">
+                        <th class="text-left px-4 py-3 font-medium text-gray-600">Pod Name</th>
+                        <th class="text-left px-4 py-3 font-medium text-gray-600">GPU</th>
+                        <th class="text-right px-4 py-3 font-medium text-gray-600">Storage Cost</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for pod in report.stopped_pods %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium text-gray-500">{{ pod.name }}</td>
+                        <td class="px-4 py-3 text-gray-400">
+                            {{ pod.gpu_name }}{% if pod.gpu_count > 1 %} &times;{{ pod.gpu_count }}{% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-right text-gray-600">${{ "%.2f"|format(pod.storage_cost) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="bg-gray-50 border-t border-gray-200 font-semibold">
+                        <td class="px-4 py-3" colspan="2">Storage Total</td>
+                        <td class="px-4 py-3 text-right">${{ "%.2f"|format(report.stopped_pods|sum(attribute='storage_cost')|round(2)) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not report.running_pods and not report.stopped_pods %}
 <div class="bg-white rounded-lg border border-gray-200 p-12 text-center">
     <p class="text-gray-500">No pods found{% if selected_user %} for <span class="font-medium">{{ selected_user }}</span>{% endif %}.</p>
 </div>

@@ -133,6 +133,7 @@ def calculate_pod_cost(pod, days_elapsed, days_in_month):
         "gpu_name": gpu_name,
         "gpu_count": gpu_count,
         "uptime_hours": round(uptime_hours, 1),
+        "cost_per_hr": round(cost_per_hr, 2),
         "compute_cost": round(compute_cost, 2),
         "storage_cost": round(storage_cost, 2),
         "total_cost": round(total_cost, 2),
@@ -156,19 +157,28 @@ def get_spend_report(api_key, user=None):
             continue
         enriched.append(pod_data)
 
-    # Sort: running first, then by total cost descending
-    enriched.sort(key=lambda p: (p["status"] != "Running", -p["total_cost"]))
+    running_pods = sorted(
+        [p for p in enriched if p["status"] == "Running"],
+        key=lambda p: -p["total_cost"],
+    )
+    stopped_pods = sorted(
+        [p for p in enriched if p["status"] != "Running"],
+        key=lambda p: -p["total_cost"],
+    )
 
     total_compute = sum(p["compute_cost"] for p in enriched)
     total_storage = sum(p["storage_cost"] for p in enriched)
     total_spend = sum(p["total_cost"] for p in enriched)
+    burn_per_hr = sum(p["cost_per_hr"] for p in running_pods)
 
     return {
         "user": user or "All Users",
         "month_label": month_label,
-        "pods": enriched,
+        "running_pods": running_pods,
+        "stopped_pods": stopped_pods,
         "total_compute": round(total_compute, 2),
         "total_storage": round(total_storage, 2),
         "total_spend": round(total_spend, 2),
+        "burn_per_hr": round(burn_per_hr, 2),
         "all_users": all_users,
     }
