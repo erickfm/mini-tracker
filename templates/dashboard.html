@@ -47,7 +47,7 @@
 {% if report.projection %}
 <div class="mb-8">
     <div class="flex items-baseline justify-between mb-2">
-        <h2 class="text-xs font-medium text-gray-500 uppercase tracking-widest">projection</h2>
+        <h2 class="text-xs font-medium text-gray-500 uppercase tracking-widest">projection <span class="normal-case text-gray-700 tracking-normal">based on current burn rate</span></h2>
         <div class="text-xs tabular-nums">
             <span class="text-gray-600">eom</span>
             <span class="font-semibold {% if report.projection.over_budget %}text-red-400{% else %}text-emerald-400{% endif %} ml-1">
@@ -66,9 +66,14 @@
     const projected = {{ report.projection.projected_json|safe }};
     const budget = {{ report.projection.budget_json|safe }};
     const daysElapsed = {{ report.projection.days_elapsed }};
+    const currentSpend = {{ report.total_spend }};
 
-    const actual = projected.map((v, i) => i < daysElapsed ? v : null);
+    // The fit curve up to today (estimated path)
+    const estimated = projected.map((v, i) => i < daysElapsed ? v : null);
+    // The fit curve from today onward (forecast)
     const forecast = projected.map((v, i) => i >= daysElapsed - 1 ? v : null);
+    // Single dot: the one real data point we actually know
+    const todayPoint = labels.map((d, i) => i === daysElapsed - 1 ? currentSpend : null);
 
     Chart.defaults.color = '#4b5563';
     Chart.defaults.borderColor = 'rgba(255,255,255,0.04)';
@@ -81,8 +86,8 @@
             labels: labels.map(d => d),
             datasets: [
                 {
-                    label: 'Actual',
-                    data: actual,
+                    label: 'Estimated',
+                    data: estimated,
                     borderColor: '#818cf8',
                     backgroundColor: 'rgba(129, 140, 248, 0.06)',
                     borderWidth: 2,
@@ -91,7 +96,7 @@
                     tension: 0.4,
                 },
                 {
-                    label: 'Projected',
+                    label: 'Forecast',
                     data: forecast,
                     borderColor: '#818cf8',
                     borderWidth: 1.5,
@@ -99,6 +104,16 @@
                     fill: false,
                     pointRadius: 0,
                     tension: 0.4,
+                },
+                {
+                    label: 'Today ($' + currentSpend.toLocaleString(undefined, {maximumFractionDigits: 0}) + ')',
+                    data: todayPoint,
+                    borderColor: '#34d399',
+                    backgroundColor: '#34d399',
+                    borderWidth: 0,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    showLine: false,
                 },
                 {
                     label: '$' + budget[0].toLocaleString() + ' budget',
