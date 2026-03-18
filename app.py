@@ -1,8 +1,10 @@
 import os
 import secrets
+import threading
+import time
 from functools import wraps
 from flask import Flask, render_template, request, session, redirect, url_for
-from runpod import get_spend_report, RunPodAPIError
+from runpod import get_spend_report, fetch_pods, fetch_billing, _sync_to_db, RunPodAPIError
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
@@ -14,6 +16,28 @@ if DATABASE_URL:
         init_db()
     except Exception as e:
         print(f"DB init failed (will run without persistence): {e}")
+
+
+# Background sync thread — runs every 5 minutes regardless of page visits
+SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL", 300))  # seconds
+
+def _background_sync():
+    api_key = os.environ.get("RUNPOD_API_KEY")
+    while True:
+        time.sleep(SYNC_INTERVAL)
+        if not api_key or not DATABASE_URL:
+            continue
+        try:
+            pods = fetch_pods(api_key)
+            billing = fetch_billing(api_key)
+            _sync_to_db(pods, billing)
+            print(f"Background sync: {len(pods)} pods, {len(billing)} billing records")
+        except Exception as e:
+            print(f"Background sync failed: {e}")
+
+if DATABASE_URL and os.environ.get("RUNPOD_API_KEY"):
+    sync_thread = threading.Thread(target=_background_sync, daemon=True)
+    sync_thread.start()
 
 
 def login_required(f):
