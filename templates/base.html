@@ -11,7 +11,12 @@
     <nav class="bg-white border-b border-gray-200 px-6 py-4">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
             <a href="/" class="text-lg font-semibold text-gray-800 tracking-tight">Mini Tracker</a>
-            <span class="text-xs text-gray-400">RunPod Spend Dashboard</span>
+            <div class="flex items-center gap-4">
+                <span class="text-xs text-gray-400">RunPod Spend Dashboard</span>
+                {% if session.get("authenticated") %}
+                <a href="/logout" class="text-xs text-gray-400 hover:text-gray-600">Logout</a>
+                {% endif %}
+            </div>
         </div>
     </nav>
 

@@ -140,6 +140,33 @@ def calculate_pod_cost(pod, days_elapsed, days_in_month):
     }
 
 
+def _weekly_cost(pod_data, days_in_week, days_in_month):
+    """Estimate a pod's cost for the current week (Mon-Sun).
+
+    For running pods: prorate compute by (days_in_week / uptime_days) if
+    uptime is longer than the week, otherwise use full compute.
+    Storage is prorated to the week days.
+    """
+    # Storage prorated to this week
+    monthly_storage = pod_data["storage_cost"]
+    # Reverse the monthly prorate, then re-prorate to the week
+    if days_in_month > 0:
+        weekly_storage = (monthly_storage / max(pod_data.get("_days_elapsed", 1), 1)) * days_in_week
+    else:
+        weekly_storage = 0
+
+    # Compute: if uptime_hours fits within the week, use it directly.
+    # Otherwise prorate.
+    uptime_hours = pod_data["uptime_hours"]
+    week_hours = days_in_week * 24
+    if uptime_hours <= week_hours:
+        weekly_compute = pod_data["compute_cost"]
+    else:
+        weekly_compute = pod_data["compute_cost"] * (week_hours / uptime_hours) if uptime_hours > 0 else 0
+
+    return round(weekly_compute + weekly_storage, 2)
+
+
 def get_spend_report(api_key, user=None):
     """Build a full spend report, optionally filtered by user."""
     pods = fetch_pods(api_key)
@@ -150,11 +177,22 @@ def get_spend_report(api_key, user=None):
     days_in_month = calendar.monthrange(today.year, today.month)[1]
     month_label = today.strftime("%B %Y")
 
+    # Current week: Monday=0 .. Sunday=6
+    weekday = today.weekday()  # 0=Mon
+    week_start = today - datetime.timedelta(days=weekday)
+    # Clamp to start of month
+    if week_start.month < today.month or week_start.year < today.year:
+        week_start = today.replace(day=1)
+    days_in_week = (today - week_start).days + 1  # inclusive of today
+    week_label = f"{week_start.strftime('%b %d')} – {today.strftime('%b %d')}"
+
     enriched = []
     for pod in pods:
         pod_data = calculate_pod_cost(pod, days_elapsed, days_in_month)
+        pod_data["_days_elapsed"] = days_elapsed
         if user and pod_data["user"] != user:
             continue
+        pod_data["weekly_cost"] = _weekly_cost(pod_data, days_in_week, days_in_month)
         enriched.append(pod_data)
 
     running_pods = sorted(
@@ -170,15 +208,18 @@ def get_spend_report(api_key, user=None):
     total_storage = sum(p["storage_cost"] for p in enriched)
     total_spend = sum(p["total_cost"] for p in enriched)
     burn_per_hr = sum(p["cost_per_hr"] for p in running_pods)
+    weekly_spend = sum(p["weekly_cost"] for p in enriched)
 
     return {
         "user": user or "All Users",
         "month_label": month_label,
+        "week_label": week_label,
         "running_pods": running_pods,
         "stopped_pods": stopped_pods,
         "total_compute": round(total_compute, 2),
         "total_storage": round(total_storage, 2),
         "total_spend": round(total_spend, 2),
+        "weekly_spend": round(weekly_spend, 2),
         "burn_per_hr": round(burn_per_hr, 2),
         "all_users": all_users,
     }

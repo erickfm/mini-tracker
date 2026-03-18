@@ -26,7 +26,16 @@
 </div>
 
 <!-- Summary Cards -->
-<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-10">
+<div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-10">
+    <div class="bg-indigo-50 rounded-lg border border-indigo-200 p-5">
+        <p class="text-xs font-medium text-indigo-600 uppercase tracking-wide">Month Total</p>
+        <p class="text-2xl font-bold text-indigo-700 mt-1">${{ "%.2f"|format(report.total_spend) }}</p>
+    </div>
+    <div class="bg-violet-50 rounded-lg border border-violet-200 p-5">
+        <p class="text-xs font-medium text-violet-600 uppercase tracking-wide">This Week</p>
+        <p class="text-2xl font-bold text-violet-700 mt-1">${{ "%.2f"|format(report.weekly_spend) }}</p>
+        <p class="text-xs text-violet-400 mt-1">{{ report.week_label }}</p>
+    </div>
     <div class="bg-white rounded-lg border border-gray-200 p-5">
         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Compute</p>
         <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.2f"|format(report.total_compute) }}</p>
@@ -34,10 +43,6 @@
     <div class="bg-white rounded-lg border border-gray-200 p-5">
         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Storage</p>
         <p class="text-2xl font-bold text-gray-900 mt-1">${{ "%.2f"|format(report.total_storage) }}</p>
-    </div>
-    <div class="bg-indigo-50 rounded-lg border border-indigo-200 p-5">
-        <p class="text-xs font-medium text-indigo-600 uppercase tracking-wide">Total Spend</p>
-        <p class="text-2xl font-bold text-indigo-700 mt-1">${{ "%.2f"|format(report.total_spend) }}</p>
     </div>
     <div class="bg-amber-50 rounded-lg border border-amber-200 p-5">
         <p class="text-xs font-medium text-amber-600 uppercase tracking-wide">Burn Rate</p>
