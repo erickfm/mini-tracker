@@ -1,5 +1,7 @@
 import calendar
 import datetime
+import json
+import math
 import requests
 
 RUNPOD_GRAPHQL_URL = "https://api.runpod.io/graphql"
@@ -167,6 +169,57 @@ def _weekly_cost(pod_data, days_in_week, days_in_month):
     return round(weekly_compute + weekly_storage, 2)
 
 
+MONTHLY_BUDGET = 5000
+
+
+def build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month):
+    """Build chart data for spend projection using a power law fit.
+
+    We have two constraints:
+      spend(t) = a * t^b
+      spend'(t) = a * b * t^(b-1) = daily_burn_rate
+
+    From spend(N) and spend'(N) we solve for a and b.
+    """
+    if days_elapsed <= 0 or total_spend <= 0:
+        return None
+
+    daily_burn = burn_per_hr * 24
+    t = days_elapsed
+
+    # b = (daily_burn * t) / total_spend
+    # Clamp b to reasonable range [0.5, 3] to avoid wild extrapolations
+    if total_spend > 0:
+        b = max(0.5, min(3.0, (daily_burn * t) / total_spend))
+    else:
+        b = 1.0
+
+    # a = total_spend / t^b
+    a = total_spend / (t ** b) if t > 0 else 0
+
+    # Generate points: actual spend so far (single known point) + projection
+    labels = list(range(1, days_in_month + 1))
+    projected = []
+    for d in labels:
+        projected.append(round(a * (d ** b), 2))
+
+    # Budget line
+    budget_line = [MONTHLY_BUDGET] * len(labels)
+
+    # Projected end-of-month spend
+    eom_projected = round(a * (days_in_month ** b), 2)
+
+    return {
+        "labels_json": json.dumps(labels),
+        "projected_json": json.dumps(projected),
+        "budget_json": json.dumps(budget_line),
+        "days_elapsed": days_elapsed,
+        "eom_projected": eom_projected,
+        "budget": MONTHLY_BUDGET,
+        "over_budget": eom_projected > MONTHLY_BUDGET,
+    }
+
+
 def get_spend_report(api_key, user=None):
     """Build a full spend report, optionally filtered by user."""
     pods = fetch_pods(api_key)
@@ -210,6 +263,8 @@ def get_spend_report(api_key, user=None):
     burn_per_hr = sum(p["cost_per_hr"] for p in running_pods)
     weekly_spend = sum(p["weekly_cost"] for p in enriched)
 
+    projection = build_projection(total_spend, burn_per_hr, days_elapsed, days_in_month)
+
     return {
         "user": user or "All Users",
         "month_label": month_label,
@@ -222,4 +277,5 @@ def get_spend_report(api_key, user=None):
         "weekly_spend": round(weekly_spend, 2),
         "burn_per_hr": round(burn_per_hr, 2),
         "all_users": all_users,
+        "projection": projection,
     }

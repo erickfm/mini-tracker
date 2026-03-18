@@ -50,6 +50,99 @@
     </div>
 </div>
 
+<!-- Spend Projection Chart -->
+{% if report.projection %}
+<div class="mb-10">
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-gray-900">Spend Projection</h2>
+        <div class="text-sm">
+            <span class="text-gray-500">End-of-month estimate:</span>
+            <span class="font-semibold {% if report.projection.over_budget %}text-red-600{% else %}text-green-600{% endif %}">
+                ${{ "%.0f"|format(report.projection.eom_projected) }}
+            </span>
+            <span class="text-gray-400">/ ${{ "%.0f"|format(report.projection.budget) }} budget</span>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg border border-gray-200 p-5">
+        <canvas id="projectionChart" height="100"></canvas>
+    </div>
+</div>
+<script>
+(function() {
+    const labels = {{ report.projection.labels_json|safe }};
+    const projected = {{ report.projection.projected_json|safe }};
+    const budget = {{ report.projection.budget_json|safe }};
+    const daysElapsed = {{ report.projection.days_elapsed }};
+
+    // Split projected into actual (up to today) and forecast (today onward)
+    const actual = projected.map((v, i) => i < daysElapsed ? v : null);
+    const forecast = projected.map((v, i) => i >= daysElapsed - 1 ? v : null);
+
+    new Chart(document.getElementById('projectionChart'), {
+        type: 'line',
+        data: {
+            labels: labels.map(d => 'Day ' + d),
+            datasets: [
+                {
+                    label: 'Actual',
+                    data: actual,
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    pointRadius: 0,
+                    tension: 0.3,
+                },
+                {
+                    label: 'Projected',
+                    data: forecast,
+                    borderColor: '#4f46e5',
+                    borderWidth: 2,
+                    borderDash: [6, 4],
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.3,
+                },
+                {
+                    label: '$' + budget[0].toLocaleString() + ' Budget',
+                    data: budget,
+                    borderColor: '#ef4444',
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                    fill: false,
+                    pointRadius: 0,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.parsed.y == null) return null;
+                            return ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(v) { return '$' + v.toLocaleString(); }
+                    }
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+
 <!-- Currently Running -->
 <div class="mb-10">
     <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -97,7 +190,7 @@
     {% endif %}
 </div>
 
-<!-- Monthly Spend Breakdown (Stopped) -->
+<!-- Stopped Pods -->
 {% if report.stopped_pods %}
 <div>
     <h2 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
